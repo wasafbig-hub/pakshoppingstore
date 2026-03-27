@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>EasyShop · No‑Code E‑commerce Store</title>
+  <!-- Tailwind CSS + Font Awesome + Google Fonts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: #f5f7fb; }
+    .transition-smooth { transition: all 0.2s ease; }
+    .cart-scroll { max-height: 55vh; overflow-y: auto; }
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+    .admin-table-container {
+      overflow-x: auto;
+      border-radius: 1rem;
+    }
+    .modal-backdrop {
+      background-color: rgba(0,0,0,0.5);
+      backdrop-filter: blur(3px);
+    }
+    img {
+      object-fit: cover;
+      background: #f1f3f5;
+    }
+    .btn-hover-scale:hover { transform: scale(1.02); }
+    button:active { transform: scale(0.98); }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- MAIN APP WRAPPER -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 md:py-8">
+    
+    <!-- HEADER with brand and tabs -->
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-8 border-b border-gray-200 pb-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-indigo-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-md">
+          <i class="fas fa-cart-shopping text-white text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-gray-800">Easy<span class="text-indigo-600">Shop</span></h1>
+          <p class="text-xs text-gray-500 -mt-1">manage products · zero coding</p>
+        </div>
+      </div>
+      <div class="flex gap-2 bg-white/70 backdrop-blur-sm p-1 rounded-full shadow-sm border">
+        <button id="storeTabBtn" class="tab-btn px-5 py-2 rounded-full font-semibold text-sm transition-all shadow-sm flex items-center gap-2 bg-indigo-600 text-white"><i class="fas fa-store"></i> Storefront</button>
+        <button id="adminTabBtn" class="tab-btn px-5 py-2 rounded-full font-semibold text-sm transition-all flex items-center gap-2 text-gray-600 hover:bg-gray-100"><i class="fas fa-cog"></i> Manage Products</button>
+      </div>
+    </div>
+
+    <!-- ========== STORE VIEW (customer side) ========== -->
+    <div id="storeView" class="transition-smooth">
+      <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Products Grid Section -->
+        <div class="lg:w-2/3">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-tag text-indigo-500"></i> All products</h2>
+            <span id="productCountBadge" class="bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full"></span>
+          </div>
+          <div id="productsGridContainer" class="product-grid">
+            <!-- dynamic product cards injected here -->
+          </div>
+        </div>
+
+        <!-- Shopping Cart Sidebar -->
+        <div class="lg:w-1/3">
+          <div class="bg-white rounded-2xl shadow-md border border-gray-100 sticky top-5 overflow-hidden">
+            <div class="bg-gray-50 px-5 py-4 border-b flex items-center justify-between">
+              <h3 class="font-bold text-lg flex items-center gap-2"><i class="fas fa-shopping-bag text-indigo-500"></i> Your Cart</h3>
+              <span id="cartItemsCount" class="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-full">0</span>
+            </div>
+            <div id="cartItemsList" class="cart-scroll px-4 py-3 space-y-3 min-h-[200px]">
+              <!-- cart items dynamic -->
+              <div class="text-center text-gray-400 py-8 text-sm">Cart is empty</div>
+            </div>
+            <div class="border-t p-4 bg-white">
+              <div class="flex justify-between font-bold text-gray-800 text-lg mb-3">
+                <span>Total</span>
+                <span id="cartTotalAmount">$0.00</span>
+              </div>
+              <button id="checkoutBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition shadow-md flex items-center justify-center gap-2"><i class="fas fa-check-circle"></i> Checkout</button>
+              <button id="clearCartBtn" class="w-full mt-2 text-gray-500 text-sm hover:text-red-500 flex items-center justify-center gap-1"><i class="fas fa-trash-alt"></i> Clear cart</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== ADMIN VIEW (manage products without coding) ========== -->
+    <div id="adminView" class="hidden transition-smooth">
+      <!-- Add new product form -->
+      <div class="bg-white rounded-2xl shadow-md p-5 md:p-6 mb-8 border border-gray-100">
+        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2 mb-5"><i class="fas fa-plus-circle text-indigo-500"></i> Add new product</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          <div><label class="block text-xs font-semibold text-gray-500 uppercase">Product name</label><input type="text" id="prodName" placeholder="Classic Hoodie" class="w-full border rounded-xl px-3 py-2 mt-1 focus:ring-indigo-500 focus:border-indigo-500"></div>
+          <div><label class="block text-xs font-semibold text-gray-500 uppercase">Price ($)</label><input type="number" id="prodPrice" placeholder="29.99" step="0.01" class="w-full border rounded-xl px-3 py-2 mt-1"></div>
+          <div><label class="block text-xs font-semibold text-gray-500 uppercase">Stock</label><input type="number" id="prodStock" placeholder="20" class="w-full border rounded-xl px-3 py-2 mt-1"></div>
+          <div><label class="block text-xs font-semibold text-gray-500 uppercase">Image URL</label><input type="text" id="prodImage" placeholder="https://picsum.photos/id/1/300/200" class="w-full border rounded-xl px-3 py-2 mt-1"></div>
+          <div><label class="block text-xs font-semibold text-gray-500 uppercase">Description</label><input type="text" id="prodDesc" placeholder="Soft cotton, premium fit" class="w-full border rounded-xl px-3 py-2 mt-1"></div>
+          <div class="md:col-span-2 lg:col-span-1"><button id="addProductBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-5 rounded-xl w-full transition flex items-center justify-center gap-2"><i class="fas fa-save"></i> Add product</button></div>
+        </div>
+      </div>
+
+      <!-- Products management table (edit / delete) -->
+      <div class="bg-white rounded-2xl shadow-md p-5 border border-gray-100">
+        <div class="flex items-center justify-between mb-4 flex-wrap">
+          <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-list-ul text-indigo-500"></i> Product inventory</h3>
+          <span class="text-xs bg-gray-100 px-3 py-1 rounded-full">click ✏️ to edit</span>
+        </div>
+        <div class="admin-table-container">
+          <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left">Image</th><th class="px-4 py-3 text-left">Name</th><th class="px-4 py-3 text-left">Price</th><th class="px-4 py-3 text-left">Stock</th><th class="px-4 py-3 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminProductTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT PRODUCT MODAL (hidden) -->
+  <div id="editModal" class="fixed inset-0 flex items-center justify-center z-50 hidden modal-backdrop transition-all">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6 shadow-2xl transform transition-all">
+      <h3 class="text-xl font-bold mb-4 flex items-center gap-2"><i class="fas fa-pen-alt text-indigo-500"></i> Edit product</h3>
+      <input type="hidden" id="editProductId">
+      <div class="space-y-3">
+        <div><label class="block text-sm font-medium">Name</label><input id="editName" class="w-full border rounded-lg p-2"></div>
+        <div><label class="block text-sm font-medium">Price ($)</label><input id="editPrice" type="number" step="0.01" class="w-full border rounded-lg p-2"></div>
+        <div><label class="block text-sm font-medium">Stock</label><input id="editStock" type="number" class="w-full border rounded-lg p-2"></div>
+        <div><label class="block text-sm font-medium">Image URL</label><input id="editImage" class="w-full border rounded-lg p-2"></div>
+        <div><label class="block text-sm font-medium">Description</label><input id="editDesc" class="w-full border rounded-lg p-2"></div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button id="saveEditBtn" class="bg-indigo-600 text-white px-5 py-2 rounded-lg flex-1 font-semibold">Save changes</button>
+        <button id="closeModalBtn" class="bg-gray-200 text-gray-800 px-5 py-2 rounded-lg flex-1">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- DATA MODELS ----------
+    let products = [];
+    let cart = [];      // each item: { productId, quantity }
+
+    // localStorage keys
+    const STORAGE_PRODUCTS = "easyshop_products";
+    const STORAGE_CART = "easyshop_cart";
+
+    // ---------- DEFAULT DEMO PRODUCTS (like Shopify starter) ----------
+    const defaultProducts = [
+      { id: 1001, name: "Minimalist T-Shirt", price: 24.99, description: "Soft organic cotton, everyday essential", imageUrl: "https://picsum.photos/id/20/300/200", stock: 15 },
+      { id: 1002, name: "Ceramic Coffee Mug", price: 14.50, description: "340ml, matte finish", imageUrl: "https://picsum.photos/id/30/300/200", stock: 8 },
+      { id: 1003, name: "Wireless Mouse", price: 32.99, description: "Ergonomic, silent click", imageUrl: "https://picsum.photos/id/0/300/200", stock: 12 },
+      { id: 1004, name: "Notebook Set", price: 9.99, description: "2 pack lined journal", imageUrl: "https://picsum.photos/id/1/300/200", stock: 25 }
+    ];
+
+    // Helper: load / save
+    function loadData() {
+      const storedProducts = localStorage.getItem(STORAGE_PRODUCTS);
+      if (storedProducts) {
+        products = JSON.parse(storedProducts);
+      } else {
+        products = defaultProducts.map(p => ({ ...p }));
+      }
+      const storedCart = localStorage.getItem(STORAGE_CART);
+      if (storedCart) {
+        cart = JSON.parse(storedCart);
+      } else {
+        cart = [];
+      }
+    }
+
+    function saveProducts() {
+      localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(products));
+    }
+    function saveCart() {
+      localStorage.setItem(STORAGE_CART, JSON.stringify(cart));
+    }
+
+    // Sync cart with product changes: remove if product missing, adjust quantity if stock lower, remove if stock 0
+    function syncCartWithProducts() {
+      let changed = false;
+      const validCart = [];
+      for (let item of cart) {
+        const product = products.find(p => p.id === item.productId);
+        if (!product) {
+          changed = true;
+          continue;
+        }
+        let newQty = item.quantity;
+        if (product.stock <= 0) {
+          changed = true;
+          continue;
+        }
+        if (item.quantity > product.stock) {
+          newQty = product.stock;
+          changed = true;
+        }
+        if (newQty > 0) {
+          validCart.push({ productId: item.productId, quantity: newQty });
+        } else {
+          changed = true;
+        }
+      }
+      if (changed) {
+        cart = validCart;
+        saveCart();
+      }
+    }
+
+    // CRUD Operations
+    function addProduct(name, price, stock, imageUrl, description) {
+      if (!name.trim()) return false;
+      const newId = Date.now() + Math.floor(Math.random() * 10000);
+      const product = {
+        id: newId,
+        name: name.trim(),
+        price: parseFloat(price),
+        stock: parseInt(stock) || 0,
+        imageUrl: imageUrl.trim() || "https://picsum.photos/id/26/300/200",
+        description: description.trim() || "No description",
+      };
+      if (isNaN(product.price) || product.price < 0) product.price = 0;
+      if (isNaN(product.stock) || product.stock < 0) product.stock = 0;
+      products.push(product);
+      saveProducts();
+      syncCartWithProducts();
+      renderAll();
+      return true;
+    }
+
+    function updateProduct(id, updatedData) {
+      const index = products.findIndex(p => p.id === id);
+      if (index === -1) return false;
+      products[index] = { ...products[index], ...updatedData };
+      if (products[index].stock < 0) products[index].stock = 0;
+      if (products[index].price < 0) products[index].price = 0;
+      saveProducts();
+      syncCartWithProducts();
+      renderAll();
+      return true;
+    }
+
+    function deleteProduct(id) {
+      if (confirm("Delete product permanently?")) {
+        products = products.filter(p => p.id !== id);
+        saveProducts();
+        syncCartWithProducts();
+        renderAll();
+      }
+    }
+
+    // Cart actions
+    function addToCart(productId, qtyToAdd = 1) {
+      const product = products.find(p => p.id === productId);
+      if (!product) return false;
+      if (product.stock <= 0) { alert("Out of stock!"); return false; }
+      const existingItem = cart.find(item => item.productId === productId);
+      let newQuantity = existingItem ? existingItem.quantity + qtyToAdd : qtyToAdd;
+      if (newQuantity > product.stock) {
+        alert(`Only ${product.stock} left in stock.`);
+        newQuantity = product.stock;
+      }
+      if (newQuantity <= 0) {
+        if (existingItem) removeCartItem(productId);
+        return false;
+      }
+      if (existingItem) {
+        existingItem.quantity = newQuantity;
+      } else {
+        cart.push({ productId, quantity: newQuantity });
+      }
+      saveCart();
+      renderAll();
+      return true;
+    }
+
+    function updateCartQuantity(productId, newQuantity) {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+      let qty = Math.max(0, parseInt(newQuantity) || 0);
+      if (qty > product.stock) qty = product.stock;
+      if (qty === 0) {
+        removeCartItem(productId);
+        return;
+      }
+      const item = cart.find(i => i.productId === productId);
+      if (item) {
+        item.quantity = qty;
+      } else if (qty > 0) {
+        cart.push({ productId, quantity: qty });
+      }
+      saveCart();
+      renderAll();
+    }
+
+    function removeCartItem(productId) {
+      cart = cart.filter(item => item.productId !== productId);
+      saveCart();
+      renderAll();
+    }
+
+    function clearCart() {
+      if (cart.length && confirm("Clear entire cart?")) {
+        cart = [];
+        saveCart();
+        renderAll();
+      }
+    }
+
+    function checkout() {
+      if (cart.length === 0) { alert("Your cart is empty."); return; }
+      // Check stock again before finalizing
+      let hasStockIssue = false;
+      for (let item of cart) {
+        const prod = products.find(p => p.id === item.productId);
+        if (!prod || prod.stock < item.quantity) {
+          alert(`Stock issue: ${prod?.name || "Product"} not available in requested quantity.`);
+          hasStockIssue = true;
+          break;
+        }
+      }
+      if (hasStockIssue) {
+        syncCartWithProducts();
+        renderAll();
+        return;
+      }
+      // Reduce stock based on cart items
+      for (let item of cart) {
+        const prod = products.find(p => p.id === item.productId);
+        if (prod) {
+          prod.stock -= item.quantity;
+        }
+      }
+      saveProducts();
+      cart = [];
+      saveCart();
+      alert("🎉 Order placed successfully! Stock updated.");
+      renderAll();
+    }
+
+    // ------------------ RENDER ENGINE ------------------
+    function renderProductGrid() {
+      const container = document.getElementById("productsGridContainer");
+      if (!container) return;
+      if (products.length === 0) {
+        container.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400"><i class="fas fa-box-open text-4xl mb-2"></i><p>No products yet. Go to "Manage Products" and add your first item.</p></div>`;
+        document.getElementById("productCountBadge").innerText = "0 items";
+        return;
+      }
+      let html = '';
+      products.forEach(prod => {
+        const inStock = prod.stock > 0;
+        html += `
+          <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 overflow-hidden flex flex-col">
+            <div class="h-48 bg-gray-100 overflow-hidden"><img src="${prod.imageUrl}" alt="${prod.name}" class="w-full h-full object-cover" onerror="this.src='https://picsum.photos/id/100/300/200'"></div>
+            <div class="p-4 flex-1 flex flex-col">
+              <h3 class="font-bold text-gray-800 text-lg">${escapeHtml(prod.name)}</h3>
+              <p class="text-gray-500 text-sm line-clamp-2 mt-1">${escapeHtml(prod.description.substring(0, 80))}</p>
+              <div class="mt-2 flex items-baseline gap-2"><span class="text-2xl font-bold text-indigo-600">$${prod.price.toFixed(2)}</span><span class="text-xs text-gray-400">${prod.stock > 0 ? `Stock: ${prod.stock}` : "Out of stock"}</span></div>
+              <button class="add-to-cart-btn mt-4 ${!inStock ? 'bg-gray-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-semibold py-2 rounded-lg transition w-full flex items-center justify-center gap-2" data-id="${prod.id}" ${!inStock ? 'disabled' : ''}>
+                <i class="fas fa-cart-plus"></i> ${inStock ? 'Add to Cart' : 'Sold Out'}
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+      document.getElementById("productCountBadge").innerText = `${products.length} items`;
+      // attach add-to-cart events
+      document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const prodId = parseInt(btn.getAttribute('data-id'));
+          addToCart(prodId, 1);
+        });
+      });
+    }
+
+    function renderCartSidebar() {
+      const cartContainer = document.getElementById("cartItemsList");
+      const totalSpan = document.getElementById("cartTotalAmount");
+      const cartCountSpan = document.getElementById("cartItemsCount");
+      if (!cartContainer) return;
+      if (cart.length === 0) {
+        cartContainer.innerHTML = `<div class="text-center text-gray-400 py-8 text-sm"><i class="fas fa-shopping-cart text-3xl mb-2"></i><p>Your cart is empty</p></div>`;
+        totalSpan.innerText = "$0.00";
+        cartCountSpan.innerText = "0";
+        return;
+      }
+      let total = 0;
+      let itemsHtml = '';
+      for (let item of cart) {
+        const product = products.find(p => p.id === item.productId);
+        if (!product) continue;
+        const subtotal = product.price * item.quantity;
+        total += subtotal;
+        itemsHtml += `
+          <div class="flex gap-3 border-b pb-3" data-cartid="${item.productId}">
+            <img src="${product.imageUrl}" class="w-14 h-14 rounded-lg object-cover bg-gray-100" onerror="this.src='https://picsum.photos/id/20/80/80'">
+            <div class="flex-1">
+              <div class="flex justify-between"><span class="font-medium">${escapeHtml(product.name)}</span><span class="font-semibold">$${subtotal.toFixed(2)}</span></div>
+              <div class="flex items-center gap-2 mt-1"><span class="text-xs text-gray-500">$${product.price.toFixed(2)} each</span>
+                <div class="flex items-center gap-1 ml-auto"><button class="cart-qty-minus text-gray-500 hover:text-indigo-600 w-6 h-6 rounded-full bg-gray-100" data-id="${item.productId}">-</button>
+                <span class="w-6 text-center text-sm">${item.quantity}</span>
+                <button class="cart-qty-plus text-gray-500 hover:text-indigo-600 w-6 h-6 rounded-full bg-gray-100" data-id="${item.productId}">+</button>
+                <button class="cart-remove text-red-400 hover:text-red-700 ml-1" data-id="${item.productId}"><i class="fas fa-trash-alt text-xs"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      cartContainer.innerHTML = itemsHtml;
+      totalSpan.innerText = `$${total.toFixed(2)}`;
+      cartCountSpan.innerText = cart.reduce((acc, i) => acc + i.quantity, 0);
+      // attach cart events
+      document.querySelectorAll('.cart-qty-minus').forEach(btn => {
+        btn.addEventListener('click', (e) => { const pid = parseInt(btn.getAttribute('data-id')); const item = cart.find(i => i.productId === pid); if (item) updateCartQuantity(pid, item.quantity - 1); });
+      });
+      document.querySelectorAll('.cart-qty-plus').forEach(btn => {
+        btn.addEventListener('click', (e) => { const pid = parseInt(btn.getAttribute('data-id')); const item = cart.find(i => i.productId === pid); if (item) updateCartQuantity(pid, item.quantity + 1); else addToCart(pid,1); });
+      });
+      document.querySelectorAll('.cart-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => { const pid = parseInt(btn.getAttribute('data-id')); removeCartItem(pid); });
+      });
+    }
+
+    function renderAdminTable() {
+      const tbody = document.getElementById("adminProductTableBody");
+      if (!tbody) return;
+      if (products.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">No products yet. Add your first product above.</td></tr>`;
+        return;
+      }
+      let rows = '';
+      products.forEach(prod => {
+        rows += `
+          <tr class="border-b hover:bg-gray-50">
+            <td class="px-4 py-2"><img src="${prod.imageUrl}" class="w-10 h-10 rounded-md object-cover" onerror="this.src='https://picsum.photos/id/26/50/50'"></td>
+            <td class="px-4 py-2 font-medium">${escapeHtml(prod.name)}</td>
+            <td class="px-4 py-2">$${prod.price.toFixed(2)}</td>
+            <td class="px-4 py-2">${prod.stock}</td>
+            <td class="px-4 py-2 flex gap-2"><button class="edit-product-btn bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1" data-id="${prod.id}"><i class="fas fa-edit"></i> Edit</button><button class="delete-product-btn bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-semibold" data-id="${prod.id}"><i class="fas fa-trash"></i> Del</button></td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = rows;
+      document.querySelectorAll('.edit-product-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => { const pid = parseInt(btn.getAttribute('data-id')); openEditModal(pid); });
+      });
+      document.querySelectorAll('.delete-product-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => { const pid = parseInt(btn.getAttribute('data-id')); deleteProduct(pid); });
+      });
+    }
+
+    function openEditModal(productId) {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+      document.getElementById("editProductId").value = product.id;
+      document.getElementById("editName").value = product.name;
+      document.getElementById("editPrice").value = product.price;
+      document.getElementById("editStock").value = product.stock;
+      document.getElementById("editImage").value = product.imageUrl;
+      document.getElementById("editDesc").value = product.description;
+      document.getElementById("editModal").classList.remove("hidden");
+    }
+
+    function closeModal() {
+      document.getElementById("editModal").classList.add("hidden");
+    }
+
+    function saveEdit() {
+      const id = parseInt(document.getElementById("editProductId").value);
+      const updated = {
+        name: document.getElementById("editName").value.trim(),
+        price: parseFloat(document.getElementById("editPrice").value),
+        stock: parseInt(document.getElementById("editStock").value),
+        imageUrl: document.getElementById("editImage").value.trim(),
+        description: document.getElementById("editDesc").value.trim(),
+      };
+      if (!updated.name) updated.name = "Unnamed";
+      if (isNaN(updated.price)) updated.price = 0;
+      if (isNaN(updated.stock)) updated.stock = 0;
+      if (!updated.imageUrl) updated.imageUrl = "https://picsum.photos/id/22/300/200";
+      if (!updated.description) updated.description = "Product description";
+      updateProduct(id, updated);
+      closeModal();
+    }
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+
+    function renderAll() {
+      renderProductGrid();
+      renderCartSidebar();
+      renderAdminTable();
+    }
+
+    // Tab switching logic
+    let currentTab = 'store';
+    function switchToStore() {
+      document.getElementById("storeView").classList.remove("hidden");
+      document.getElementById("adminView").classList.add("hidden");
+      document.getElementById("storeTabBtn").classList.add("bg-indigo-600", "text-white");
+      document.getElementById("storeTabBtn").classList.remove("text-gray-600", "bg-transparent");
+      document.getElementById("adminTabBtn").classList.remove("bg-indigo-600", "text-white");
+      document.getElementById("adminTabBtn").classList.add("text-gray-600", "bg-transparent");
+      currentTab = 'store';
+    }
+    function switchToAdmin() {
+      document.getElementById("storeView").classList.add("hidden");
+      document.getElementById("adminView").classList.remove("hidden");
+      document.getElementById("adminTabBtn").classList.add("bg-indigo-600", "text-white");
+      document.getElementById("adminTabBtn").classList.remove("text-gray-600", "bg-transparent");
+      document.getElementById("storeTabBtn").classList.remove("bg-indigo-600", "text-white");
+      document.getElementById("storeTabBtn").classList.add("text-gray-600", "bg-transparent");
+      currentTab = 'admin';
+      renderAdminTable(); // refresh table
+    }
+
+    // Event listeners and initialization
+    function init() {
+      loadData();
+      syncCartWithProducts();
+      renderAll();
+      // Tabs
+      document.getElementById("storeTabBtn").addEventListener("click", switchToStore);
+      document.getElementById("adminTabBtn").addEventListener("click", switchToAdmin);
+      // Add product
+      document.getElementById("addProductBtn").addEventListener("click", () => {
+        const name = document.getElementById("prodName").value;
+        const price = document.getElementById("prodPrice").value;
+        const stock = document.getElementById("prodStock").value;
+        const image = document.getElementById("prodImage").value;
+        const desc = document.getElementById("prodDesc").value;
+        if (!name) { alert("Product name required"); return; }
+        addProduct(name, price, stock, image, desc);
+        // clear form
+        document.getElementById("prodName").value = "";
+        document.getElementById("prodPrice").value = "";
+        document.getElementById("prodStock").value = "";
+        document.getElementById("prodImage").value = "";
+        document.getElementById("prodDesc").value = "";
+      });
+      document.getElementById("checkoutBtn").addEventListener("click", checkout);
+      document.getElementById("clearCartBtn").addEventListener("click", clearCart);
+      document.getElementById("saveEditBtn").addEventListener("click", saveEdit);
+      document.getElementById("closeModalBtn").addEventListener("click", closeModal);
+      document.getElementById("editModal").addEventListener("click", (e) => { if(e.target === document.getElementById("editModal")) closeModal(); });
+      switchToStore();
+    }
+    init();
+  </script>
+</body>
+</html>
